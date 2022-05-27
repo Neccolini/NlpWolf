@@ -19,10 +19,19 @@ import random
 from collections import deque
 from typing import Deque, List
 
-from aiwolf import (Agent, ComingoutContentBuilder, Content,
-                    DivinedResultContentBuilder, GameInfo, GameSetting,
-                    IdentContentBuilder, Judge, Role, Species,
-                    VoteContentBuilder)
+from aiwolf import (
+    Agent,
+    ComingoutContentBuilder,
+    Content,
+    DivinedResultContentBuilder,
+    GameInfo,
+    GameSetting,
+    IdentContentBuilder,
+    Judge,
+    Role,
+    Species,
+    VoteContentBuilder,
+)
 from aiwolf.constant import AGENT_NONE
 
 from const import CONTENT_SKIP, JUDGE_EMPTY
@@ -75,17 +84,21 @@ class NlpWolfPossessed(NlpWolfVillager):
             if self.game_info.day != 0:
                 target = self.random_select(self.get_alive(self.not_judged_agents))
         elif self.fake_role == Role.MEDIUM:
-            target = self.game_info.executed_agent \
-                if self.game_info.executed_agent is not None \
+            target = (
+                self.game_info.executed_agent
+                if self.game_info.executed_agent is not None
                 else AGENT_NONE
+            )
         if target == AGENT_NONE:
             return JUDGE_EMPTY
         # Determine a fake result.
         # If the number of werewolves found is less than the total number of werewolves,
         # judge as a werewolf with a probability of 0.5.
-        result: Species = Species.WEREWOLF \
-            if len(self.werewolves) < self.num_wolves and random.random() < 0.5 \
+        result: Species = (
+            Species.WEREWOLF
+            if len(self.werewolves) < self.num_wolves and random.random() < 0.5
             else Species.HUMAN
+        )
         return Judge(self.me, self.game_info.day, target, result)
 
     def day_start(self) -> None:
@@ -101,8 +114,11 @@ class NlpWolfPossessed(NlpWolfVillager):
 
     def talk(self) -> Content:
         # Do comingout if it's on scheduled day or a werewolf is found.
-        if self.fake_role != Role.VILLAGER and not self.has_co \
-                and (self.game_info.day == self.co_date or self.werewolves):
+        if (
+            self.fake_role != Role.VILLAGER
+            and not self.has_co
+            and (self.game_info.day == self.co_date or self.werewolves)
+        ):
             self.has_co = True
             return Content(ComingoutContentBuilder(self.me, self.fake_role))
         # Report the judgement after doing comingout.
@@ -117,8 +133,13 @@ class NlpWolfPossessed(NlpWolfVillager):
         # Vote for one of the alive agent that declared itself the same role of Possessed
         # if there are no candidates.
         if not candidates:
-            candidates = self.get_alive([a for a in self.comingout_map
-                                         if self.comingout_map[a] == self.fake_role])
+            candidates = self.get_alive(
+                [
+                    a
+                    for a in self.comingout_map
+                    if self.comingout_map[a] == self.fake_role
+                ]
+            )
         # Vite for one of the alive agents if there are no candidates.
         if not candidates:
             candidates = self.get_alive_others(self.game_info.agent_list)
