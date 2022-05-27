@@ -18,9 +18,18 @@
 from collections import deque
 from typing import Deque, List, Optional
 
-from aiwolf import (Agent, ComingoutContentBuilder, Content,
-                    DivinedResultContentBuilder, GameInfo, GameSetting, Judge,
-                    Role, Species, VoteContentBuilder)
+from aiwolf import (
+    Agent,
+    ComingoutContentBuilder,
+    Content,
+    DivinedResultContentBuilder,
+    GameInfo,
+    GameSetting,
+    Judge,
+    Role,
+    Species,
+    VoteContentBuilder,
+)
 from aiwolf.constant import AGENT_NONE
 
 from const import CONTENT_SKIP
@@ -82,8 +91,9 @@ class NlpWolfSeer(NlpWolfVillager):
         candidates: List[Agent] = self.get_alive(self.werewolves)
         # Vote for one of the alive fake seers if there are no candidates.
         if not candidates:
-            candidates = self.get_alive([a for a in self.comingout_map
-                                         if self.comingout_map[a] == Role.SEER])
+            candidates = self.get_alive(
+                [a for a in self.comingout_map if self.comingout_map[a] == Role.SEER]
+            )
         # Vote for one of the alive agents if there are no candidates.
         if not candidates:
             candidates = self.get_alive_others(self.game_info.agent_list)

@@ -40,12 +40,20 @@ class NlpWolfBodyguard(NlpWolfVillager):
 
     def guard(self) -> Agent:
         # Guard one of the alive non-fake seers.
-        candidates: List[Agent] = self.get_alive([j.agent for j in self.divination_reports
-                                                  if j.result != Species.WEREWOLF or j.target != self.me])
+        candidates: List[Agent] = self.get_alive(
+            [
+                j.agent
+                for j in self.divination_reports
+                if j.result != Species.WEREWOLF or j.target != self.me
+            ]
+        )
         # Guard one of the alive mediums if there are no candidates.
         if not candidates:
-            candidates = [a for a in self.comingout_map if self.is_alive(a)
-                          and self.comingout_map[a] == Role.MEDIUM]
+            candidates = [
+                a
+                for a in self.comingout_map
+                if self.is_alive(a) and self.comingout_map[a] == Role.MEDIUM
+            ]
         # Guard one of the alive sagents if there are no candidates.
         if not candidates:
             candidates = self.get_alive_others(self.game_info.agent_list)

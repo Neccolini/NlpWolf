@@ -18,9 +18,18 @@
 from collections import deque
 from typing import Deque, List, Optional
 
-from aiwolf import (Agent, ComingoutContentBuilder, Content, GameInfo,
-                    GameSetting, IdentContentBuilder, Judge, Role, Species,
-                    VoteContentBuilder)
+from aiwolf import (
+    Agent,
+    ComingoutContentBuilder,
+    Content,
+    GameInfo,
+    GameSetting,
+    IdentContentBuilder,
+    Judge,
+    Role,
+    Species,
+    VoteContentBuilder,
+)
 from aiwolf.constant import AGENT_NONE
 
 from const import CONTENT_SKIP
@@ -28,7 +37,7 @@ from villager import NlpWolfVillager
 
 
 class NlpWolfMedium(NlpWolfVillager):
-    """ NlpWolf medium agent. """
+    """NlpWolf medium agent."""
 
     co_date: int
     """Scheduled comingout date."""
@@ -73,16 +82,25 @@ class NlpWolfMedium(NlpWolfVillager):
             judge: Judge = self.my_judge_queue.popleft()
             return Content(IdentContentBuilder(judge.target, judge.result))
         # Fake seers.
-        fake_seers: List[Agent] = [j.agent for j in self.divination_reports
-                                   if j.target == self.me and j.result == Species.WEREWOLF]
+        fake_seers: List[Agent] = [
+            j.agent
+            for j in self.divination_reports
+            if j.target == self.me and j.result == Species.WEREWOLF
+        ]
         # Vote for one of the alive fake mediums.
-        candidates: List[Agent] = [a for a in self.comingout_map
-                                   if self.is_alive(a) and self.comingout_map[a] == Role.MEDIUM]
+        candidates: List[Agent] = [
+            a
+            for a in self.comingout_map
+            if self.is_alive(a) and self.comingout_map[a] == Role.MEDIUM
+        ]
         # Vote for one of the alive agents that were judged as werewolves by non-fake seers
         # if there are no candidates.
         if not candidates:
-            reported_wolves: List[Agent] = [j.target for j in self.divination_reports
-                                            if j.agent not in fake_seers and j.result == Species.WEREWOLF]
+            reported_wolves: List[Agent] = [
+                j.target
+                for j in self.divination_reports
+                if j.agent not in fake_seers and j.result == Species.WEREWOLF
+            ]
             candidates = self.get_alive_others(reported_wolves)
         # Vote for one of the alive fake seers if there are no candidates.
         if not candidates:

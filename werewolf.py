@@ -18,8 +18,17 @@
 import random
 from typing import List
 
-from aiwolf import (Agent, AttackContentBuilder, ComingoutContentBuilder,
-                    Content, GameInfo, GameSetting, Judge, Role, Species)
+from aiwolf import (
+    Agent,
+    AttackContentBuilder,
+    ComingoutContentBuilder,
+    Content,
+    GameInfo,
+    GameSetting,
+    Judge,
+    Role,
+    Species,
+)
 from aiwolf.constant import AGENT_NONE
 
 from const import CONTENT_SKIP, JUDGE_EMPTY
@@ -50,8 +59,13 @@ class NlpWolfWerewolf(NlpWolfPossessed):
         # Do comingout on the day that randomly selected from the 1st, 2nd and 3rd day.
         self.co_date = random.randint(1, 3)
         # Choose fake role randomly.
-        self.fake_role = random.choice([r for r in [Role.VILLAGER, Role.SEER, Role.MEDIUM]
-                                        if r in self.game_info.existing_role_list])
+        self.fake_role = random.choice(
+            [
+                r
+                for r in [Role.VILLAGER, Role.SEER, Role.MEDIUM]
+                if r in self.game_info.existing_role_list
+            ]
+        )
 
     def get_fake_judge(self) -> Judge:
         """Generate a fake judgement."""
@@ -61,17 +75,24 @@ class NlpWolfWerewolf(NlpWolfPossessed):
             if self.game_info.day != 0:
                 target = self.random_select(self.get_alive(self.not_judged_agents))
         elif self.fake_role == Role.MEDIUM:
-            target = self.game_info.executed_agent if self.game_info.executed_agent is not None \
+            target = (
+                self.game_info.executed_agent
+                if self.game_info.executed_agent is not None
                 else AGENT_NONE
+            )
         if target == AGENT_NONE:
             return JUDGE_EMPTY
         # Determine a fake result.
         # If the target is a human
         # and the number of werewolves found is less than the total number of werewolves,
         # judge as a werewolf with a probability of 0.3.
-        result: Species = Species.WEREWOLF if target in self.humans \
-            and len(self.werewolves) < self.num_wolves and random.random() < 0.3 \
+        result: Species = (
+            Species.WEREWOLF
+            if target in self.humans
+            and len(self.werewolves) < self.num_wolves
+            and random.random() < 0.3
             else Species.HUMAN
+        )
         return Judge(self.me, self.game_info.day, target, result)
 
     def day_start(self) -> None:
@@ -90,11 +111,18 @@ class NlpWolfWerewolf(NlpWolfPossessed):
         if not candidates:
             candidates = self.get_alive(self.humans)
         # Declare which to vote for if not declare yet or the candidate is changed.
-        if self.attack_vote_candidate == AGENT_NONE or self.attack_vote_candidate not in candidates:
+        if (
+            self.attack_vote_candidate == AGENT_NONE
+            or self.attack_vote_candidate not in candidates
+        ):
             self.attack_vote_candidate = self.random_select(candidates)
             if self.attack_vote_candidate != AGENT_NONE:
                 return Content(AttackContentBuilder(self.attack_vote_candidate))
         return CONTENT_SKIP
 
     def attack(self) -> Agent:
-        return self.attack_vote_candidate if self.attack_vote_candidate != AGENT_NONE else self.me
+        return (
+            self.attack_vote_candidate
+            if self.attack_vote_candidate != AGENT_NONE
+            else self.me
+        )

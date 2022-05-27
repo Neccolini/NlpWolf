@@ -30,4 +30,6 @@ if __name__ == "__main__":
     parser.add_argument("-r", type=str, action="store", dest="role", default="none")
     parser.add_argument("-n", type=str, action="store", dest="name")
     input_args = parser.parse_args()
-    TcpipClient(agent, input_args.name, input_args.hostname, input_args.port, input_args.role).connect()
+    TcpipClient(
+        agent, input_args.name, input_args.hostname, input_args.port, input_args.role
+    ).connect()

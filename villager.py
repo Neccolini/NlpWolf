@@ -18,9 +18,20 @@
 import random
 from typing import Dict, List
 
-from aiwolf import (AbstractPlayer, Agent, Content, GameInfo, GameSetting,
-                    Judge, Role, Species, Status, Talk, Topic,
-                    VoteContentBuilder)
+from aiwolf import (
+    AbstractPlayer,
+    Agent,
+    Content,
+    GameInfo,
+    GameSetting,
+    Judge,
+    Role,
+    Species,
+    Status,
+    Talk,
+    Topic,
+    VoteContentBuilder,
+)
 from aiwolf.constant import AGENT_NONE
 
 from const import CONTENT_SKIP
@@ -129,7 +140,9 @@ class NlpWolfVillager(AbstractPlayer):
 
     def update(self, game_info: GameInfo) -> None:
         self.game_info = game_info  # Update game information.
-        for i in range(self.talk_list_head, len(game_info.talk_list)):  # Analyze talks that have not been analyzed yet.
+        for i in range(
+            self.talk_list_head, len(game_info.talk_list)
+        ):  # Analyze talks that have not been analyzed yet.
             tk: Talk = game_info.talk_list[i]  # The talk to be analyzed.
             talker: Agent = tk.agent
             if talker == self.me:  # Skip my talk.
@@ -138,20 +151,30 @@ class NlpWolfVillager(AbstractPlayer):
             if content.topic == Topic.COMINGOUT:
                 self.comingout_map[talker] = content.role
             elif content.topic == Topic.DIVINED:
-                self.divination_reports.append(Judge(talker, game_info.day, content.target, content.result))
+                self.divination_reports.append(
+                    Judge(talker, game_info.day, content.target, content.result)
+                )
             elif content.topic == Topic.IDENTIFIED:
-                self.identification_reports.append(Judge(talker, game_info.day, content.target, content.result))
+                self.identification_reports.append(
+                    Judge(talker, game_info.day, content.target, content.result)
+                )
         self.talk_list_head = len(game_info.talk_list)  # All done.
 
     def talk(self) -> Content:
         # Choose an agent to be voted for while talking.
         #
         # The list of fake seers that reported me as a werewolf.
-        fake_seers: List[Agent] = [j.agent for j in self.divination_reports
-                                   if j.target == self.me and j.result == Species.WEREWOLF]
+        fake_seers: List[Agent] = [
+            j.agent
+            for j in self.divination_reports
+            if j.target == self.me and j.result == Species.WEREWOLF
+        ]
         # Vote for one of the alive agents that were judged as werewolves by non-fake seers.
-        reported_wolves: List[Agent] = [j.target for j in self.divination_reports
-                                        if j.agent not in fake_seers and j.result == Species.WEREWOLF]
+        reported_wolves: List[Agent] = [
+            j.target
+            for j in self.divination_reports
+            if j.agent not in fake_seers and j.result == Species.WEREWOLF
+        ]
         candidates: List[Agent] = self.get_alive_others(reported_wolves)
         # Vote for one of the alive fake seers if there are no candidates.
         if not candidates:
