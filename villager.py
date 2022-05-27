@@ -16,6 +16,8 @@
 # limitations under the License.
 
 import random
+import datetime
+import time
 from typing import Dict, List
 
 from aiwolf import (
@@ -56,9 +58,21 @@ class NlpWolfVillager(AbstractPlayer):
     """Time series of identification reports."""
     talk_list_head: int
     """Index of the talk to be analysed next."""
+    long_uttrs: list
+    """List of little tweets in the game"""
+    short_uter: list
+    """List of little tweets(shorter) in the game"""
+    talk_end: bool
+    """Whether there is nothing to say"""
+    seer_co_list: list
+    """List of who COed Seer"""
 
     def __init__(self) -> None:
         """Initialize a new instance of NlpWolfVillager."""
+
+        # 乱数の設定
+        now = datetime.datetime.now()
+        random.sed(int(time.mktime(now.timetuple())))
 
         self.me = AGENT_NONE
         self.vote_candidate = AGENT_NONE
@@ -67,6 +81,8 @@ class NlpWolfVillager(AbstractPlayer):
         self.divination_reports = []
         self.identification_reports = []
         self.talk_list_head = 0
+
+        self.talk_end = False
 
     def is_alive(self, agent: Agent) -> bool:
         """Return whether the agent is alive.
@@ -136,6 +152,7 @@ class NlpWolfVillager(AbstractPlayer):
 
     def day_start(self) -> None:
         self.talk_list_head = 0
+        self.talk_end = False
         self.vote_candidate = AGENT_NONE
 
     def update(self, game_info: GameInfo) -> None:
@@ -160,10 +177,86 @@ class NlpWolfVillager(AbstractPlayer):
                 )
         self.talk_list_head = len(game_info.talk_list)  # All done.
 
-    def talk(self) -> Content:
+    def talk(self, talk_history) -> Content:
+        changed_state = False
+        uttr = ""
+        for talk in talk_history:
+            if talk["agent"] == self.me:
+                continue
+            r_result = self.rg.recognize(talk["text"])
+            if len(r_result) == 0:
+                continue
+            for res in r_result:
+                if res[0] == "CO":
+                    if res[1] == "占" and talk["agent"]:
+                        self.seer_co_list.append(talk["agent"])
+                        changed_state = True
+        if uttr != "" and uttr is not None:
+            return uttr
+
+        # 挨拶発話(1日目)
+        if self.game_info["day"] == 0 and len(talk_history) == 0:
+            greetings: list = ["よろです", "こんにちは!", "よろ～～", "こにゃにちは～"]
+            random.shuffle(greetings)
+            return greetings[0]
+        elif self.game_info["day"] == 0 and len(talk_history[0]["turn"]) > 5:
+            return "Over"
+
+        elif self.game_info["day"] > 0 and len(talk_history) == 0:
+            if (
+                self.game_info["attackedAgent"] != self.game_info["executedAgent"]
+                and self.game_info["attackedAgent"] > 0
+            ):
+                return ""
+                """
+                lib.util.random_select(self.templates["襲撃"]["あり"]).replace(
+                    "《AGENTNAME》", lib.util.agent_name(self.game_info["attackedAgent"])
+                )
+                """
+        """
+        if changed_state:
+            if self.game_info["day"] <= 1:
+                self.ug.set_data(
+                    self.seer_co_list,
+                    self.divine_list,
+                    None,
+                    None,
+                    my_id=self.my_id,
+                    my_role=lib.util.role_name(self.role),
+                )
+            elif self.game_info["day"] >= 2:
+                self.ug.set_data(
+                    self.seer_co_list,
+                    self.divine_list,
+                    self.vote_list,
+                    self.dead_id_list,
+                    my_id=self.my_id,
+                    my_role=lib.util.role_name(self.role),
+                )
+        """
+        uttr = self.ug.generate_estimate_uttr()
+        if uttr is None:
+            uttr = ""
+
+        if len(uttr) > 0 and uttr is not None:
+            return uttr
+
+        if len(talk_history) > 0:
+            if (
+                talk_history[0]["turn"] > 7
+                and self.vote_target_id < 0
+                and self.game_info["day"] >= 1
+            ):
+                uttr, self.vote_target_id = self.ug.generate_vote_uttr(
+                    self.game_info["day"]
+                )
+                return uttr
+        uttr = "Skip"
+
         # Choose an agent to be voted for while talking.
         #
         # The list of fake seers that reported me as a werewolf.
+        """
         fake_seers: List[Agent] = [
             j.agent
             for j in self.divination_reports
@@ -188,6 +281,7 @@ class NlpWolfVillager(AbstractPlayer):
             if self.vote_candidate != AGENT_NONE:
                 return Content(VoteContentBuilder(self.vote_candidate))
         return CONTENT_SKIP
+        """
 
     def vote(self) -> Agent:
         return self.vote_candidate if self.vote_candidate != AGENT_NONE else self.me
