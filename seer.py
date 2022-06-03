@@ -28,7 +28,11 @@ from aiwolf import (
     Judge,
     Role,
     Species,
+    ContentBuilder,
     VoteContentBuilder,
+)
+from utterance_generator import (
+    generate,
 )
 from aiwolf.constant import AGENT_NONE
 
@@ -79,6 +83,10 @@ class NlpWolfSeer(NlpWolfVillager):
                 self.werewolves.append(judge.target)
 
     def talk(self) -> Content:
+        content: Content = Content(ContentBuilder())
+        content.text = generate(Role.SEER)
+        return content
+        """
         # Do comingout if it's on scheduled day or a werewolf is found.
         if not self.has_co and (self.game_info.day == self.co_date or self.werewolves):
             self.has_co = True
@@ -103,6 +111,7 @@ class NlpWolfSeer(NlpWolfVillager):
             if self.vote_candidate != AGENT_NONE:
                 return Content(VoteContentBuilder(self.vote_candidate))
         return CONTENT_SKIP
+        """
 
     def divine(self) -> Agent:
         # Divine a agent randomly chosen from undivined agents.

@@ -28,6 +28,10 @@ from aiwolf import (
     Judge,
     Role,
     Species,
+    ContentBuilder,
+)
+from utterance_generator import (
+    generate,
 )
 from aiwolf.constant import AGENT_NONE
 
@@ -126,3 +130,8 @@ class NlpWolfWerewolf(NlpWolfPossessed):
             if self.attack_vote_candidate != AGENT_NONE
             else self.me
         )
+
+    def talk(self) -> Content:
+        content: Content = Content(ContentBuilder())
+        content.text = generate(Role.WEREWOLF)
+        return content

@@ -30,7 +30,11 @@ from aiwolf import (
     Judge,
     Role,
     Species,
+    ContentBuilder,
     VoteContentBuilder,
+)
+from utterance_generator import (
+    generate,
 )
 from aiwolf.constant import AGENT_NONE
 
@@ -113,6 +117,10 @@ class NlpWolfPossessed(NlpWolfVillager):
                 self.werewolves.append(judge.target)
 
     def talk(self) -> Content:
+        content: Content = Content(ContentBuilder())
+        content.text = generate(Role.POSSESSED)
+        return content
+        """
         # Do comingout if it's on scheduled day or a werewolf is found.
         if (
             self.fake_role != Role.VILLAGER
@@ -149,3 +157,4 @@ class NlpWolfPossessed(NlpWolfVillager):
             if self.vote_candidate != AGENT_NONE:
                 return Content(VoteContentBuilder(self.vote_candidate))
         return CONTENT_SKIP
+        """
