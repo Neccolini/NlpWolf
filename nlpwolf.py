@@ -17,8 +17,6 @@
 
 from aiwolf import AbstractPlayer, Agent, Content, GameInfo, GameSetting, Role
 
-from bodyguard import NlpWolfBodyguard
-from medium import NlpWolfMedium
 from possessed import NlpWolfPossessed
 from seer import NlpWolfSeer
 from villager import NlpWolfVillager
@@ -37,8 +35,6 @@ class NlpWolfPlayer(AbstractPlayer):
 
     def __init__(self) -> None:
         self.villager = NlpWolfVillager()
-        self.bodyguard = NlpWolfBodyguard()
-        self.medium = NlpWolfMedium()
         self.seer = NlpWolfSeer()
         self.possessed = NlpWolfPossessed()
         self.werewolf = NlpWolfWerewolf()

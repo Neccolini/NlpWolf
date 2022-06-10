@@ -36,12 +36,15 @@ from aiwolf import (
     ContentBuilder,
     VoteContentBuilder,
 )
-from utterance_generator import (
-    generate,
-)
+
 from aiwolf.constant import AGENT_NONE
 
-from const import CONTENT_SKIP
+from utterance_generator import (
+    Generator,
+)
+from utterance_recognizer import (
+    Recognizer,
+)
 
 
 class NlpWolfVillager(AbstractPlayer):
@@ -49,7 +52,7 @@ class NlpWolfVillager(AbstractPlayer):
 
     me: Agent
     """Myself."""
-    vote_candidate: Agent
+    # vote_candidate: Agent
     """Candidate for voting."""
     game_info: GameInfo
     """Information about current game."""
@@ -67,10 +70,8 @@ class NlpWolfVillager(AbstractPlayer):
     """List of little tweets in the game"""
     short_uter: list
     """List of little tweets(shorter) in the game"""
-    talk_end: bool
-    """Whether there is nothing to say"""
-    seer_co_list: list
-    """List of who COed Seer"""
+    recognizer: Recognizer
+    generator: Generator
 
     def __init__(self) -> None:
         """Initialize a new instance of NlpWolfVillager."""
@@ -88,6 +89,9 @@ class NlpWolfVillager(AbstractPlayer):
         self.talk_list_head = 0
 
         self.talk_end = False
+
+        self.recognizer = Recognizer()
+        self.generator = Generator()
 
     def is_alive(self, agent: Agent) -> bool:
         """Return whether the agent is alive.
@@ -161,30 +165,14 @@ class NlpWolfVillager(AbstractPlayer):
         self.vote_candidate = AGENT_NONE
 
     def update(self, game_info: GameInfo) -> None:
-        self.game_info = game_info  # Update game information.
-        for i in range(
-            self.talk_list_head, len(game_info.talk_list)
-        ):  # Analyze talks that have not been analyzed yet.
-            tk: Talk = game_info.talk_list[i]  # The talk to be analyzed.
-            talker: Agent = tk.agent
-            if talker == self.me:  # Skip my talk.
-                continue
-            content: Content = Content.compile(tk.text)
-            if content.topic == Topic.COMINGOUT:
-                self.comingout_map[talker] = content.role
-            elif content.topic == Topic.DIVINED:
-                self.divination_reports.append(
-                    Judge(talker, game_info.day, content.target, content.result)
-                )
-            elif content.topic == Topic.IDENTIFIED:
-                self.identification_reports.append(
-                    Judge(talker, game_info.day, content.target, content.result)
-                )
-        self.talk_list_head = len(game_info.talk_list)  # All done.
+        self.game_info = game_info
+
+        # ここで、他人の発言を見て、それを解釈し、次にあてられたときに発言する内容を決定、また投票先の情報などを変更したりする
+        self.recognizer.recognize(game_info)
 
     def talk(self) -> Content:
         content: Content = Content(ContentBuilder())
-        content.text = generate(Role.VILLAGER)
+        content.text = self.generator.generate(Role.VILLAGER)
         return content
 
     def vote(self) -> Agent:

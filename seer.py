@@ -32,7 +32,10 @@ from aiwolf import (
     VoteContentBuilder,
 )
 from utterance_generator import (
-    generate,
+    Generator,
+)
+from utterance_recognizer import (
+    Recognizer,
 )
 from aiwolf.constant import AGENT_NONE
 
@@ -53,6 +56,8 @@ class NlpWolfSeer(NlpWolfVillager):
     """Agents that have not been divined."""
     werewolves: List[Agent]
     """Found werewolves."""
+    recognizer: Recognizer
+    generator: Generator
 
     def __init__(self) -> None:
         """Initialize a new instance of NlpWolfSeer."""
@@ -62,6 +67,9 @@ class NlpWolfSeer(NlpWolfVillager):
         self.my_judge_queue = deque()
         self.not_divined_agents = []
         self.werewolves = []
+
+        self.recognizer = Recognizer()
+        self.generator = Generator()
 
     def initialize(self, game_info: GameInfo, game_setting: GameSetting) -> None:
         super().initialize(game_info, game_setting)
@@ -82,36 +90,16 @@ class NlpWolfSeer(NlpWolfVillager):
             if judge.result == Species.WEREWOLF:
                 self.werewolves.append(judge.target)
 
+    def update(self, game_info: GameInfo) -> None:
+        self.game_info = game_info
+
+        # ここで、他人の発言を見て、それを解釈し、次にあてられたときに発言する内容を決定、また投票先の情報などを変更したりする
+        self.recognizer.recognize(game_info)
+
     def talk(self) -> Content:
         content: Content = Content(ContentBuilder())
-        content.text = generate(Role.SEER)
+        content.text = self.generator.generate(Role.SEER)
         return content
-        """
-        # Do comingout if it's on scheduled day or a werewolf is found.
-        if not self.has_co and (self.game_info.day == self.co_date or self.werewolves):
-            self.has_co = True
-            return Content(ComingoutContentBuilder(self.me, Role.SEER))
-        # Report the divination result after doing comingout.
-        if self.has_co and self.my_judge_queue:
-            judge: Judge = self.my_judge_queue.popleft()
-            return Content(DivinedResultContentBuilder(judge.target, judge.result))
-        # Vote for one of the alive werewolves.
-        candidates: List[Agent] = self.get_alive(self.werewolves)
-        # Vote for one of the alive fake seers if there are no candidates.
-        if not candidates:
-            candidates = self.get_alive(
-                [a for a in self.comingout_map if self.comingout_map[a] == Role.SEER]
-            )
-        # Vote for one of the alive agents if there are no candidates.
-        if not candidates:
-            candidates = self.get_alive_others(self.game_info.agent_list)
-        # Declare which to vote for if not declare yet or the candidate is changed.
-        if self.vote_candidate == AGENT_NONE or self.vote_candidate not in candidates:
-            self.vote_candidate = self.random_select(candidates)
-            if self.vote_candidate != AGENT_NONE:
-                return Content(VoteContentBuilder(self.vote_candidate))
-        return CONTENT_SKIP
-        """
 
     def divine(self) -> Agent:
         # Divine a agent randomly chosen from undivined agents.
