@@ -30,7 +30,14 @@ from aiwolf import (
     Judge,
     Role,
     Species,
+    ContentBuilder,
     VoteContentBuilder,
+)
+from utterance_generator import (
+    Generator,
+)
+from utterance_recognizer import (
+    Recognizer,
 )
 from aiwolf.constant import AGENT_NONE
 
@@ -55,6 +62,8 @@ class NlpWolfPossessed(NlpWolfVillager):
     """The number of werewolves."""
     werewolves: List[Agent]
     """Fake werewolves."""
+    recognizer: Recognizer
+    generator: Generator
 
     def __init__(self) -> None:
         """Initialize a new instance of NlpWolfPossessed."""
@@ -66,6 +75,9 @@ class NlpWolfPossessed(NlpWolfVillager):
         self.not_judged_agents = []
         self.num_wolves = 0
         self.werewolves = []
+
+        self.recognizer = Recognizer()
+        self.generator = Generator()
 
     def initialize(self, game_info: GameInfo, game_setting: GameSetting) -> None:
         super().initialize(game_info, game_setting)
@@ -113,39 +125,12 @@ class NlpWolfPossessed(NlpWolfVillager):
                 self.werewolves.append(judge.target)
 
     def talk(self) -> Content:
-        # Do comingout if it's on scheduled day or a werewolf is found.
-        if (
-            self.fake_role != Role.VILLAGER
-            and not self.has_co
-            and (self.game_info.day == self.co_date or self.werewolves)
-        ):
-            self.has_co = True
-            return Content(ComingoutContentBuilder(self.me, self.fake_role))
-        # Report the judgement after doing comingout.
-        if self.has_co and self.my_judgee_queue:
-            judge: Judge = self.my_judgee_queue.popleft()
-            if self.fake_role == Role.SEER:
-                return Content(DivinedResultContentBuilder(judge.target, judge.result))
-            elif self.fake_role == Role.MEDIUM:
-                return Content(IdentContentBuilder(judge.target, judge.result))
-        # Vote for one of the alive fake werewolves.
-        candidates: List[Agent] = self.get_alive(self.werewolves)
-        # Vote for one of the alive agent that declared itself the same role of Possessed
-        # if there are no candidates.
-        if not candidates:
-            candidates = self.get_alive(
-                [
-                    a
-                    for a in self.comingout_map
-                    if self.comingout_map[a] == self.fake_role
-                ]
-            )
-        # Vite for one of the alive agents if there are no candidates.
-        if not candidates:
-            candidates = self.get_alive_others(self.game_info.agent_list)
-        # Declare which to vote for if not declare yet or the candidate is changed.
-        if self.vote_candidate == AGENT_NONE or self.vote_candidate not in candidates:
-            self.vote_candidate = self.random_select(candidates)
-            if self.vote_candidate != AGENT_NONE:
-                return Content(VoteContentBuilder(self.vote_candidate))
-        return CONTENT_SKIP
+        content: Content = Content(ContentBuilder())
+        content.text = self.generator.generate(Role.POSSESSED)
+        return content
+
+    def update(self, game_info: GameInfo) -> None:
+        self.game_info = game_info
+
+        # ここで、他人の発言を見て、それを解釈し、次にあてられたときに発言する内容を決定、また投票先の情報などを変更したりする
+        self.recognizer.recognize(game_info)

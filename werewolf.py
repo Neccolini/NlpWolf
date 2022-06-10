@@ -28,6 +28,13 @@ from aiwolf import (
     Judge,
     Role,
     Species,
+    ContentBuilder,
+)
+from utterance_generator import (
+    Generator,
+)
+from utterance_recognizer import (
+    Recognizer,
 )
 from aiwolf.constant import AGENT_NONE
 
@@ -44,6 +51,9 @@ class NlpWolfWerewolf(NlpWolfPossessed):
     """Humans."""
     attack_vote_candidate: Agent
     """The candidate for the attack voting."""
+    recognizer: Recognizer
+    generator: Generator
+    """"""
 
     def __init__(self) -> None:
         """Initialize a new instance of NlpWolfWerewolf."""
@@ -51,6 +61,9 @@ class NlpWolfWerewolf(NlpWolfPossessed):
         self.allies = []
         self.humans = []
         self.attack_vote_candidate = AGENT_NONE
+
+        self.recognizer = Recognizer()
+        self.generator = Generator()
 
     def initialize(self, game_info: GameInfo, game_setting: GameSetting) -> None:
         super().initialize(game_info, game_setting)
@@ -126,3 +139,14 @@ class NlpWolfWerewolf(NlpWolfPossessed):
             if self.attack_vote_candidate != AGENT_NONE
             else self.me
         )
+
+    def update(self, game_info: GameInfo) -> None:
+        self.game_info = game_info
+
+        # ここで、他人の発言を見て、それを解釈し、次にあてられたときに発言する内容を決定、また投票先の情報などを変更したりする
+        self.recognizer.recognize(game_info)
+
+    def talk(self) -> Content:
+        content: Content = Content(ContentBuilder())
+        content.text = self.generator.generate(Role.WEREWOLF)
+        return content

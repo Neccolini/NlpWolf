@@ -16,6 +16,8 @@
 # limitations under the License.
 
 import random
+import datetime
+import time
 from typing import Dict, List
 
 from aiwolf import (
@@ -30,11 +32,19 @@ from aiwolf import (
     Status,
     Talk,
     Topic,
+    Utterance,
+    ContentBuilder,
     VoteContentBuilder,
 )
+
 from aiwolf.constant import AGENT_NONE
 
-from const import CONTENT_SKIP
+from utterance_generator import (
+    Generator,
+)
+from utterance_recognizer import (
+    Recognizer,
+)
 
 
 class NlpWolfVillager(AbstractPlayer):
@@ -42,7 +52,7 @@ class NlpWolfVillager(AbstractPlayer):
 
     me: Agent
     """Myself."""
-    vote_candidate: Agent
+    # vote_candidate: Agent
     """Candidate for voting."""
     game_info: GameInfo
     """Information about current game."""
@@ -56,9 +66,19 @@ class NlpWolfVillager(AbstractPlayer):
     """Time series of identification reports."""
     talk_list_head: int
     """Index of the talk to be analysed next."""
+    long_uttrs: list
+    """List of little tweets in the game"""
+    short_uter: list
+    """List of little tweets(shorter) in the game"""
+    recognizer: Recognizer
+    generator: Generator
 
     def __init__(self) -> None:
         """Initialize a new instance of NlpWolfVillager."""
+
+        # 乱数の設定
+        now = datetime.datetime.now()
+        random.seed(int(time.mktime(now.timetuple())))
 
         self.me = AGENT_NONE
         self.vote_candidate = AGENT_NONE
@@ -67,6 +87,11 @@ class NlpWolfVillager(AbstractPlayer):
         self.divination_reports = []
         self.identification_reports = []
         self.talk_list_head = 0
+
+        self.talk_end = False
+
+        self.recognizer = Recognizer()
+        self.generator = Generator()
 
     def is_alive(self, agent: Agent) -> bool:
         """Return whether the agent is alive.
@@ -136,58 +161,19 @@ class NlpWolfVillager(AbstractPlayer):
 
     def day_start(self) -> None:
         self.talk_list_head = 0
+        self.talk_end = False
         self.vote_candidate = AGENT_NONE
 
     def update(self, game_info: GameInfo) -> None:
-        self.game_info = game_info  # Update game information.
-        for i in range(
-            self.talk_list_head, len(game_info.talk_list)
-        ):  # Analyze talks that have not been analyzed yet.
-            tk: Talk = game_info.talk_list[i]  # The talk to be analyzed.
-            talker: Agent = tk.agent
-            if talker == self.me:  # Skip my talk.
-                continue
-            content: Content = Content.compile(tk.text)
-            if content.topic == Topic.COMINGOUT:
-                self.comingout_map[talker] = content.role
-            elif content.topic == Topic.DIVINED:
-                self.divination_reports.append(
-                    Judge(talker, game_info.day, content.target, content.result)
-                )
-            elif content.topic == Topic.IDENTIFIED:
-                self.identification_reports.append(
-                    Judge(talker, game_info.day, content.target, content.result)
-                )
-        self.talk_list_head = len(game_info.talk_list)  # All done.
+        self.game_info = game_info
+
+        # ここで、他人の発言を見て、それを解釈し、次にあてられたときに発言する内容を決定、また投票先の情報などを変更したりする
+        self.recognizer.recognize(game_info)
 
     def talk(self) -> Content:
-        # Choose an agent to be voted for while talking.
-        #
-        # The list of fake seers that reported me as a werewolf.
-        fake_seers: List[Agent] = [
-            j.agent
-            for j in self.divination_reports
-            if j.target == self.me and j.result == Species.WEREWOLF
-        ]
-        # Vote for one of the alive agents that were judged as werewolves by non-fake seers.
-        reported_wolves: List[Agent] = [
-            j.target
-            for j in self.divination_reports
-            if j.agent not in fake_seers and j.result == Species.WEREWOLF
-        ]
-        candidates: List[Agent] = self.get_alive_others(reported_wolves)
-        # Vote for one of the alive fake seers if there are no candidates.
-        if not candidates:
-            candidates = self.get_alive(fake_seers)
-        # Vote for one of the alive agents if there are no candidates.
-        if not candidates:
-            candidates = self.get_alive_others(self.game_info.agent_list)
-        # Declare which to vote for if not declare yet or the candidate is changed.
-        if self.vote_candidate == AGENT_NONE or self.vote_candidate not in candidates:
-            self.vote_candidate = self.random_select(candidates)
-            if self.vote_candidate != AGENT_NONE:
-                return Content(VoteContentBuilder(self.vote_candidate))
-        return CONTENT_SKIP
+        content: Content = Content(ContentBuilder())
+        content.text = self.generator.generate(Role.VILLAGER)
+        return content
 
     def vote(self) -> Agent:
         return self.vote_candidate if self.vote_candidate != AGENT_NONE else self.me
