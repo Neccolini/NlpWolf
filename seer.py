@@ -58,7 +58,8 @@ class NlpWolfSeer(NlpWolfVillager):
     """Found werewolves."""
     recognizer: Recognizer
     generator: Generator
-
+    game_info: GameInfo
+    """GameInfo"""
     def __init__(self) -> None:
         """Initialize a new instance of NlpWolfSeer."""
         super().__init__()
@@ -98,7 +99,7 @@ class NlpWolfSeer(NlpWolfVillager):
 
     def talk(self) -> Content:
         content: Content = Content(ContentBuilder())
-        content.text = self.generator.generate(Role.SEER)
+        content.text = self.generator.generate(self, Role.SEER)
         return content
 
     def divine(self) -> Agent:

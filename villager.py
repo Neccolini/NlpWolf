@@ -172,10 +172,11 @@ class NlpWolfVillager(AbstractPlayer):
 
     def talk(self) -> Content:
         content: Content = Content(ContentBuilder())
-        content.text = self.generator.generate(Role.VILLAGER)
+        content.text = self.generator.generate(self, Role.VILLAGER)
         return content
 
     def vote(self) -> Agent:
+        # todo
         return self.vote_candidate if self.vote_candidate != AGENT_NONE else self.me
 
     def attack(self) -> Agent:

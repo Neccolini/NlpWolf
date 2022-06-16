@@ -126,7 +126,7 @@ class NlpWolfPossessed(NlpWolfVillager):
 
     def talk(self) -> Content:
         content: Content = Content(ContentBuilder())
-        content.text = self.generator.generate(Role.POSSESSED)
+        content.text = self.generator.generate(self, Role.POSSESSED)
         return content
 
     def update(self, game_info: GameInfo) -> None:

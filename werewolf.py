@@ -148,5 +148,5 @@ class NlpWolfWerewolf(NlpWolfPossessed):
 
     def talk(self) -> Content:
         content: Content = Content(ContentBuilder())
-        content.text = self.generator.generate(Role.WEREWOLF)
+        content.text = self.generator.generate(self, Role.WEREWOLF)
         return content
