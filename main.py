@@ -5,6 +5,7 @@ from selenium.webdriver.chrome import service as fs
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from styleframe import StyleFrame, Styler, utils
+
 # Excelの保存最適化の為のライブラリー未使用
 
 
@@ -34,10 +35,8 @@ options.add_argument('headless')
 options.add_argument("--disable-extensions")
 chrome_service = fs.Service(executable_path=CHROMEDRIVER)
 driver = webdriver.Chrome(service=chrome_service, options=options)
-driver.get(link) # 村１の1日目のリンクから
+driver.get(link)  # 村１の1日目のリンクから
 time.sleep(1)
-
-
 
 
 def incrementDialogDay(dialog_day):
@@ -45,17 +44,17 @@ def incrementDialogDay(dialog_day):
     return dialog_day
 
 
-
-
 def incrementVillageNo(vil_current_num):
     vil_current_num += 1
     return vil_current_num
+
 
 # 次の日のページに遷移
 def toNextDay(vil_current_num, dialog_day):
     link = 'http://ninjinix.x0.com/wolfg/index.rb?vid=' + str(vil_current_num) + '&meslog=00' + str(
         dialog_day) + '_progress&mode=say'
     return link
+
 
 # 次の村に遷移
 def toAnotherVillage(vil_current_num):
@@ -68,22 +67,24 @@ def toAnotherVillage(vil_current_num):
 
 def add_dataframe(category, length, vil_no, day, name, dialog):
 
-    df = pd.DataFrame(columns=category)
+    df_t = pd.DataFrame(columns=category)
 
     for i in range(length):
-        df = df.append({
-            '村No.': vil_no[i],
-            'Day': day[i],
-            'Name': name[i],
-            '対話ログ': dialog[i],
-        }, ignore_index=True)
+        data_ = [[ vil_no[i], day[i],name[i], dialog[i]]]
+        df = pd.DataFrame(data = data_, columns=category)
+        df_t = pd.concat([df_t, df], ignore_index=True, axis = 0)
+    # df_t = df.append({
+    #     '村No.': vil_no[i],
+    #     'Day': day[i],
+    #     'Name': name[i],
+    #     '対話ログ': dialog[i],
+    # }, )
 
 
-    return df
+    return df_t
 
 
 def save_data_to(df):
-
     filename = './Dialog_Data_From_BBS.xlsx'
     df.to_excel(filename, encoding='utf-8-sig')
 
@@ -92,11 +93,13 @@ def save_data_to(df):
 i = 3
 print(link)
 while (True):
+
+
     try:
         isMessage = driver.find_element(By.XPATH, '//*[@id="all"]/div[2]/div[1]/div')
     except NoSuchElementException:
 
-        if (vil_current_num < 4): # 何番目の村までデータをとるかを選択
+        if (vil_current_num < 10):  # 何番目の村までデータをとるかを選択
             print('move to next village')
             dialog_day = 0
             link = toAnotherVillage(vil_current_num)
@@ -104,6 +107,10 @@ while (True):
             driver.get(link)
             i = 3
             print(link)
+            print(len(dialogs))
+            print(len(names))
+            print(len(days))
+            print(len(vil_no))
             isMessage = driver.find_element(By.XPATH, '//*[@id="all"]/div[2]/div[1]/div')
         else:
             break
@@ -112,6 +119,7 @@ while (True):
 
         # time.sleep(1)
         # print(i)
+
         Xpath = f"//*[@id='all']/div[2]/div[{i}]/a[2]"
         temp = driver.find_elements(By.XPATH, Xpath)
         # print(Xpath)
@@ -134,14 +142,21 @@ while (True):
             # 次の日に遷移
             dialog_day = incrementDialogDay(dialog_day)
             link = toNextDay(vil_current_num, dialog_day)
-            i = 4
             driver.get(link)
+
+            a_counter = 0
+            announce_counter = driver.find_elements(By.CLASS_NAME, "announce")
+            for item in announce_counter:
+                # print(item.text)
+                a_counter += 1
+            a_counter+=1
+            i = a_counter
             # print(link)
 
-print(len(dialogs))
-print(len(names))
-print(len(days))
-print(len(vil_no))
+# print(len(dialogs))
+# print(len(names))
+# print(len(days))
+# print(len(vil_no))
 
 total_count = len(dialogs)
 
@@ -156,7 +171,6 @@ save_data_to(add_dataframe(category, total_count, vil_no, days, names, dialogs))
 # //*[@id="all"]/div[2]/div[207]/a[2]
 # //*[@id="all"]/div[2]/div[4]/a[2]
 # //*[@id="all"]/div[2]/div[5]/a[2]
-
 
 
 def main():
