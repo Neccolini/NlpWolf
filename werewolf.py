@@ -16,7 +16,7 @@
 # limitations under the License.
 
 import random
-from typing import List
+from typing import Dict, List
 
 from aiwolf import (
     Agent,
@@ -40,7 +40,7 @@ from aiwolf.constant import AGENT_NONE
 
 from const import CONTENT_SKIP, JUDGE_EMPTY
 from possessed import NlpWolfPossessed
-
+import utils
 
 class NlpWolfWerewolf(NlpWolfPossessed):
     """NlpWolf werewolf agent."""
@@ -51,15 +51,40 @@ class NlpWolfWerewolf(NlpWolfPossessed):
     """Humans."""
     attack_vote_candidate: Agent
     """The candidate for the attack voting."""
+    me: Agent
+    """Myself."""
+    # vote_candidate: Agent
+    """Candidate for voting."""
+    game_info: GameInfo
+    """Information about current game."""
+    game_setting: GameSetting
+    """Settings of current game."""
+    comingout_map: Dict[Agent, Role]
+    """Mapping between an agent and the role it claims that it is."""
+    divination_reports: Dict[int, List[Judge]]
+    """Time series of divination reports."""
+    identification_reports: List[Judge]
+    """Time series of identification reports."""
+    talk_list_head: int
+    """Index of the talk to be analysed next."""
+    long_uttrs: list
+    """List of little tweets in the game"""
+    short_uter: list
+    """List of little tweets(shorter) in the game"""
+    seer_co_list: List[int]
+    """List of who came out as seer."""
     recognizer: Recognizer
     generator: Generator
-    """"""
 
     def __init__(self) -> None:
         """Initialize a new instance of NlpWolfWerewolf."""
         super().__init__()
         self.allies = []
         self.humans = []
+        self.seer_co_list = []
+        self.divination_reports = {}
+        for i in range(1, 6):
+            self.divination_reports[i] = []
         self.attack_vote_candidate = AGENT_NONE
 
         self.recognizer = Recognizer()
@@ -144,9 +169,38 @@ class NlpWolfWerewolf(NlpWolfPossessed):
         self.game_info = game_info
 
         # ここで、他人の発言を見て、それを解釈し、次にあてられたときに発言する内容を決定、また投票先の情報などを変更したりする
-        self.recognizer.recognize(game_info)
+        # self.recognizer.recognize(game_info)
 
     def talk(self) -> Content:
+        
+        if self.game_info.day == 1:
+            for _talk in self.game_info.talk_list:
+                talk = _talk.text
+                cnt = 0
+                cnt += "白" in talk
+                cnt += "シロ" in talk
+                cnt += "黒" in talk
+                cnt += "クロ" in talk
+                cnt += "人狼" in talk
+                cnt += "人間" in talk
+                cnt += "占った" in talk
+                cnt += "占い" in talk
+                cnt += "結果" in talk
+                cnt += "Agent" in talk
+                if cnt >= 3 and _talk.agent.agent_idx not in self.seer_co_list:  # 占い師の発言
+                    self.seer_co_list.append(_talk.agent.agent_idx)
+                    white = ("シロ" in talk) | ("白" in talk) | ("人狼じゃな" in talk) | ("人間" in talk) | ("人狼ではな" in talk)
+                    result = Species.HUMAN if white else Species.WEREWOLF
+                    judge: Judge = Judge(
+                        Agent(_talk.agent.agent_idx),
+                        self.game_info.day,
+                        Agent(utils.extract_agent_int(_talk.text)),
+                        result,
+                    )
+                    if _talk.agent.agent_idx not in self.divination_reports.keys():
+                        self.divination_reports[_talk.agent.agent_idx] = []
+                    self.divination_reports[_talk.agent.agent_idx].append(judge)
+        
         content: Content = Content(ContentBuilder())
         content.text = self.generator.generate(self, Role.WEREWOLF)
         return content

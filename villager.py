@@ -45,11 +45,12 @@ from utterance_generator import (
 from utterance_recognizer import (
     Recognizer,
 )
+import utils
 
 
 class NlpWolfVillager(AbstractPlayer):
     """NlpWolf villager agent."""
-
+    
     me: Agent
     """Myself."""
     # vote_candidate: Agent
@@ -60,7 +61,7 @@ class NlpWolfVillager(AbstractPlayer):
     """Settings of current game."""
     comingout_map: Dict[Agent, Role]
     """Mapping between an agent and the role it claims that it is."""
-    divination_reports: List[Judge]
+    divination_reports: Dict[int, List[Judge]]
     """Time series of divination reports."""
     identification_reports: List[Judge]
     """Time series of identification reports."""
@@ -70,6 +71,10 @@ class NlpWolfVillager(AbstractPlayer):
     """List of little tweets in the game"""
     short_uter: list
     """List of little tweets(shorter) in the game"""
+    seer_co_list: List[int]
+    """List of who came out as seer."""
+    talk_lst_idx: int
+    """どこまでtalk_listの中身を見たか"""
     recognizer: Recognizer
     generator: Generator
 
@@ -87,7 +92,10 @@ class NlpWolfVillager(AbstractPlayer):
         self.divination_reports = []
         self.identification_reports = []
         self.talk_list_head = 0
-
+        self.seer_co_list = []
+        self.divination_reports = {}
+        for i in range(1, 6):
+            self.divination_reports[i] = []
         self.talk_end = False
 
         self.recognizer = Recognizer()
@@ -158,6 +166,7 @@ class NlpWolfVillager(AbstractPlayer):
         self.comingout_map.clear()
         self.divination_reports.clear()
         self.identification_reports.clear()
+        self.seer_co_list.clear()
 
     def day_start(self) -> None:
         self.talk_list_head = 0
@@ -166,11 +175,52 @@ class NlpWolfVillager(AbstractPlayer):
 
     def update(self, game_info: GameInfo) -> None:
         self.game_info = game_info
-
         # ここで、他人の発言を見て、それを解釈し、次にあてられたときに発言する内容を決定、また投票先の情報などを変更したりする
-        self.recognizer.recognize(game_info)
+        # self.recognizer.recognize(game_info)
 
     def talk(self) -> Content:
+        if self.game_info.day == 1:
+            for _talk in self.game_info.talk_list:
+                talk = _talk.text
+                cnt = 0
+                cnt += "白" in talk
+                cnt += "シロ" in talk
+                cnt += "黒" in talk
+                cnt += "クロ" in talk
+                cnt += "人狼" in talk
+                cnt += "人間" in talk
+                cnt += "占った" in talk
+                cnt += "占い" in talk
+                cnt += "結果" in talk
+                cnt += "Agent" in talk
+                cnt -= ("把握" in talk) * 2
+                cnt -= ("ok" in talk) * 2
+                cnt -= ("了解" in talk) * 2
+                cnt -= ("承知" in talk) * 2
+                cnt -= ("なるほど" in talk) * 2
+                cnt -= ("わかった" in talk) * 2
+                cnt -= ("わかりました" in talk) * 2
+                if (
+                    cnt >= 3 and _talk.agent.agent_idx not in self.seer_co_list
+                ):  # 占い師の発言
+                    self.seer_co_list.append(_talk.agent.agent_idx)
+                    white = (
+                        ("シロ" in talk)
+                        | ("白" in talk)
+                        | ("人狼じゃな" in talk)
+                        | ("人間" in talk)
+                        | ("人狼ではな" in talk)
+                    )
+                    result = Species.HUMAN if white else Species.WEREWOLF
+                    judge: Judge = Judge(
+                        Agent(_talk.agent.agent_idx),
+                        self.game_info.day,
+                        Agent(utils.extract_agent_int(_talk.text)),
+                        result,
+                    )
+                    if _talk.agent.agent_idx not in self.divination_reports.keys():
+                        self.divination_reports[_talk.agent.agent_idx] = []
+                    self.divination_reports[_talk.agent.agent_idx].append(judge)
         content: Content = Content(ContentBuilder())
         content.text = self.generator.generate(self, Role.VILLAGER)
         return content
