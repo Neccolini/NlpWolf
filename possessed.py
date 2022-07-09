@@ -17,7 +17,7 @@
 
 import random
 from collections import deque
-from typing import Deque, List
+from typing import Dict, List
 
 from aiwolf import (
     Agent,
@@ -50,18 +50,28 @@ class NlpWolfPossessed(NlpWolfVillager):
 
     fake_role: Role
     """Fake role."""
-    co_date: int
-    """Scheduled comingout date."""
-    has_co: bool
-    """Whether or not comingout has done."""
-    my_judgee_queue: Deque[Judge]
-    """Queue of fake judgements."""
-    not_judged_agents: List[Agent]
-    """Agents that have not been judged."""
-    num_wolves: int
-    """The number of werewolves."""
-    werewolves: List[Agent]
-    """Fake werewolves."""
+    me: Agent
+    """Myself."""
+    # vote_candidate: Agent
+    """Candidate for voting."""
+    game_info: GameInfo
+    """Information about current game."""
+    game_setting: GameSetting
+    """Settings of current game."""
+    comingout_map: Dict[Agent, Role]
+    """Mapping between an agent and the role it claims that it is."""
+    divination_reports: Dict[int, List[Judge]]
+    """Time series of divination reports."""
+    identification_reports: List[Judge]
+    """Time series of identification reports."""
+    talk_list_head: int
+    """Index of the talk to be analysed next."""
+    long_uttrs: list
+    """List of little tweets in the game"""
+    short_uter: list
+    """List of little tweets(shorter) in the game"""
+    seer_co_list: List[int]
+    """List of who came out as seer."""
     recognizer: Recognizer
     generator: Generator
 
@@ -75,7 +85,9 @@ class NlpWolfPossessed(NlpWolfVillager):
         self.not_judged_agents = []
         self.num_wolves = 0
         self.werewolves = []
-
+        self.seer_co_list = []
+        self.divination_reports = {}
+        
         self.recognizer = Recognizer()
         self.generator = Generator()
 
@@ -88,7 +100,9 @@ class NlpWolfPossessed(NlpWolfVillager):
         self.not_judged_agents = self.get_others(self.game_info.agent_list)
         self.num_wolves = game_setting.role_num_map.get(Role.WEREWOLF, 0)
         self.werewolves.clear()
-
+        self.seer_co_list.clear()
+        self.divination_reports.clear()
+        
     def get_fake_judge(self) -> Judge:
         """Generate a fake judgement."""
         target: Agent = AGENT_NONE

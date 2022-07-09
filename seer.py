@@ -16,7 +16,7 @@
 # limitations under the License.
 
 from collections import deque
-from typing import Deque, List, Optional
+from typing import Dict, List, Optional
 
 from aiwolf import (
     Agent,
@@ -46,19 +46,30 @@ from villager import NlpWolfVillager
 class NlpWolfSeer(NlpWolfVillager):
     """NlpWolf seer agent."""
 
-    co_date: int
-    """Scheduled comingout date."""
-    has_co: bool
-    """Whether or not comingout has done."""
-    my_judge_queue: Deque[Judge]
-    """Queue of divination results."""
-    not_divined_agents: List[Agent]
-    """Agents that have not been divined."""
-    werewolves: List[Agent]
-    """Found werewolves."""
+    me: Agent
+    """Myself."""
+    # vote_candidate: Agent
+    """Candidate for voting."""
+    game_info: GameInfo
+    """Information about current game."""
+    game_setting: GameSetting
+    """Settings of current game."""
+    comingout_map: Dict[Agent, Role]
+    """Mapping between an agent and the role it claims that it is."""
+    divination_reports: Dict[int, List[Judge]]
+    """Time series of divination reports."""
+    identification_reports: List[Judge]
+    """Time series of identification reports."""
+    talk_list_head: int
+    """Index of the talk to be analysed next."""
+    long_uttrs: list
+    """List of little tweets in the game"""
+    short_uter: list
+    """List of little tweets(shorter) in the game"""
+    seer_co_list: List[int]
+    """List of who came out as seer."""
     recognizer: Recognizer
     generator: Generator
-    game_info: GameInfo
     """GameInfo"""
     def __init__(self) -> None:
         """Initialize a new instance of NlpWolfSeer."""
@@ -68,7 +79,8 @@ class NlpWolfSeer(NlpWolfVillager):
         self.my_judge_queue = deque()
         self.not_divined_agents = []
         self.werewolves = []
-
+        self.seer_co_list = []
+        self.divination_reports = {}
         self.recognizer = Recognizer()
         self.generator = Generator()
 
@@ -79,6 +91,8 @@ class NlpWolfSeer(NlpWolfVillager):
         self.my_judge_queue.clear()
         self.not_divined_agents = self.get_others(self.game_info.agent_list)
         self.werewolves.clear()
+        self.seer_co_list.clear()
+        self.divination_reports.clear()
 
     def day_start(self) -> None:
         super().day_start()
