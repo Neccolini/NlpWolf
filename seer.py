@@ -17,7 +17,7 @@
 
 from collections import deque
 from typing import Dict, List, Optional
-
+import random
 from aiwolf import (
     Agent,
     ComingoutContentBuilder,
@@ -34,9 +34,6 @@ from aiwolf import (
 from utterance_generator import (
     Generator,
 )
-from utterance_recognizer import (
-    Recognizer,
-)
 from aiwolf.constant import AGENT_NONE
 
 from const import CONTENT_SKIP
@@ -48,8 +45,6 @@ class NlpWolfSeer(NlpWolfVillager):
 
     me: Agent
     """Myself."""
-    # vote_candidate: Agent
-    """Candidate for voting."""
     game_info: GameInfo
     """Information about current game."""
     game_setting: GameSetting
@@ -68,9 +63,10 @@ class NlpWolfSeer(NlpWolfVillager):
     """List of little tweets(shorter) in the game"""
     seer_co_list: List[int]
     """List of who came out as seer."""
-    recognizer: Recognizer
+    vote_candidates: List[Agent]
+    """List of who to vote"""
     generator: Generator
-    """GameInfo"""
+
     def __init__(self) -> None:
         """Initialize a new instance of NlpWolfSeer."""
         super().__init__()
@@ -81,7 +77,7 @@ class NlpWolfSeer(NlpWolfVillager):
         self.werewolves = []
         self.seer_co_list = []
         self.divination_reports = {}
-        self.recognizer = Recognizer()
+        self.vote_candidates = []
         self.generator = Generator()
 
     def initialize(self, game_info: GameInfo, game_setting: GameSetting) -> None:
@@ -93,6 +89,7 @@ class NlpWolfSeer(NlpWolfVillager):
         self.werewolves.clear()
         self.seer_co_list.clear()
         self.divination_reports.clear()
+        self.vote_candidates.clear()
 
     def day_start(self) -> None:
         super().day_start()
@@ -108,8 +105,6 @@ class NlpWolfSeer(NlpWolfVillager):
     def update(self, game_info: GameInfo) -> None:
         self.game_info = game_info
 
-        # ここで、他人の発言を見て、それを解釈し、次にあてられたときに発言する内容を決定、また投票先の情報などを変更したりする
-        self.recognizer.recognize(game_info)
 
     def talk(self) -> Content:
         content: Content = Content(ContentBuilder())
@@ -120,3 +115,11 @@ class NlpWolfSeer(NlpWolfVillager):
         # Divine a agent randomly chosen from undivined agents.
         target: Agent = self.random_select(self.not_divined_agents)
         return target if target != AGENT_NONE else self.me
+
+    def vote(self) -> Agent:
+        # todo
+        return (
+            random.choice(self.vote_candidates)
+            if len(self.vote_candidates)
+            else Agent(random.choice([1,2,3,4,5]))
+        )

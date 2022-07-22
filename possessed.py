@@ -36,9 +36,6 @@ from aiwolf import (
 from utterance_generator import (
     Generator,
 )
-from utterance_recognizer import (
-    Recognizer,
-)
 from aiwolf.constant import AGENT_NONE
 
 from const import CONTENT_SKIP, JUDGE_EMPTY
@@ -52,8 +49,6 @@ class NlpWolfPossessed(NlpWolfVillager):
     """Fake role."""
     me: Agent
     """Myself."""
-    # vote_candidate: Agent
-    """Candidate for voting."""
     game_info: GameInfo
     """Information about current game."""
     game_setting: GameSetting
@@ -72,7 +67,8 @@ class NlpWolfPossessed(NlpWolfVillager):
     """List of little tweets(shorter) in the game"""
     seer_co_list: List[int]
     """List of who came out as seer."""
-    recognizer: Recognizer
+    vote_candidates: List[Agent]
+    """List of who to vote"""
     generator: Generator
 
     def __init__(self) -> None:
@@ -87,8 +83,8 @@ class NlpWolfPossessed(NlpWolfVillager):
         self.werewolves = []
         self.seer_co_list = []
         self.divination_reports = {}
-        
-        self.recognizer = Recognizer()
+        self.vote_candidates = []
+
         self.generator = Generator()
 
     def initialize(self, game_info: GameInfo, game_setting: GameSetting) -> None:
@@ -102,7 +98,8 @@ class NlpWolfPossessed(NlpWolfVillager):
         self.werewolves.clear()
         self.seer_co_list.clear()
         self.divination_reports.clear()
-        
+        self.vote_candidates.clear()
+
     def get_fake_judge(self) -> Judge:
         """Generate a fake judgement."""
         target: Agent = AGENT_NONE
@@ -146,5 +143,10 @@ class NlpWolfPossessed(NlpWolfVillager):
     def update(self, game_info: GameInfo) -> None:
         self.game_info = game_info
 
-        # ここで、他人の発言を見て、それを解釈し、次にあてられたときに発言する内容を決定、また投票先の情報などを変更したりする
-        self.recognizer.recognize(game_info)
+    def vote(self) -> Agent:
+        # todo
+        return (
+            random.choice(self.vote_candidates)
+            if len(self.vote_candidates)
+            else Agent(random.choice([1, 2, 3, 4, 5]))
+        )

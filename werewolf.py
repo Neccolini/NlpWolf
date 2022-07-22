@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import random
+import re
 from typing import Dict, List
 
 from aiwolf import (
@@ -26,6 +27,7 @@ from aiwolf import (
     GameInfo,
     GameSetting,
     Judge,
+    Status,
     Role,
     Species,
     ContentBuilder,
@@ -33,14 +35,12 @@ from aiwolf import (
 from utterance_generator import (
     Generator,
 )
-from utterance_recognizer import (
-    Recognizer,
-)
 from aiwolf.constant import AGENT_NONE
 
 from const import CONTENT_SKIP, JUDGE_EMPTY
 from possessed import NlpWolfPossessed
 import utils
+
 
 class NlpWolfWerewolf(NlpWolfPossessed):
     """NlpWolf werewolf agent."""
@@ -53,8 +53,6 @@ class NlpWolfWerewolf(NlpWolfPossessed):
     """The candidate for the attack voting."""
     me: Agent
     """Myself."""
-    # vote_candidate: Agent
-    """Candidate for voting."""
     game_info: GameInfo
     """Information about current game."""
     game_setting: GameSetting
@@ -73,7 +71,8 @@ class NlpWolfWerewolf(NlpWolfPossessed):
     """List of little tweets(shorter) in the game"""
     seer_co_list: List[int]
     """List of who came out as seer."""
-    recognizer: Recognizer
+    vote_candidates: List[Agent]
+    """List of who to vote"""
     generator: Generator
 
     def __init__(self) -> None:
@@ -86,12 +85,13 @@ class NlpWolfWerewolf(NlpWolfPossessed):
         for i in range(1, 6):
             self.divination_reports[i] = []
         self.attack_vote_candidate = AGENT_NONE
-
-        self.recognizer = Recognizer()
+        self.vote_candidates = []
         self.generator = Generator()
 
     def initialize(self, game_info: GameInfo, game_setting: GameSetting) -> None:
-        super().initialize(game_info, game_setting)
+        self.game_info = game_info
+        self.game_setting = game_setting
+        self.me = game_info.me
         self.allies = list(self.game_info.role_map.keys())
         self.humans = [a for a in self.game_info.agent_list if a not in self.allies]
         # Do comingout on the day that randomly selected from the 1st, 2nd and 3rd day.
@@ -104,6 +104,22 @@ class NlpWolfWerewolf(NlpWolfPossessed):
                 if r in self.game_info.existing_role_list
             ]
         )
+        self.comingout_map.clear()
+        self.divination_reports.clear()
+        self.identification_reports.clear()
+        self.seer_co_list.clear()
+        self.vote_candidates.clear()
+
+    def is_alive(self, agent: Agent) -> bool:
+        """Return whether the agent is alive.
+
+        Args:
+            agent: The agent.
+
+        Returns:
+            True if the agent is alive, otherwise false.
+        """
+        return self.game_info.status_map[agent] == Status.ALIVE
 
     def get_fake_judge(self) -> Judge:
         """Generate a fake judgement."""
@@ -168,39 +184,90 @@ class NlpWolfWerewolf(NlpWolfPossessed):
     def update(self, game_info: GameInfo) -> None:
         self.game_info = game_info
 
-        # ここで、他人の発言を見て、それを解釈し、次にあてられたときに発言する内容を決定、また投票先の情報などを変更したりする
-        # self.recognizer.recognize(game_info)
-
     def talk(self) -> Content:
-        
-        if self.game_info.day == 1:
-            for _talk in self.game_info.talk_list:
-                talk = _talk.text
-                cnt = 0
-                cnt += "白" in talk
-                cnt += "シロ" in talk
-                cnt += "黒" in talk
-                cnt += "クロ" in talk
-                cnt += "人狼" in talk
-                cnt += "人間" in talk
-                cnt += "占った" in talk
-                cnt += "占い" in talk
-                cnt += "結果" in talk
-                cnt += "Agent" in talk
-                if cnt >= 3 and _talk.agent.agent_idx not in self.seer_co_list:  # 占い師の発言
-                    self.seer_co_list.append(_talk.agent.agent_idx)
-                    white = ("シロ" in talk) | ("白" in talk) | ("人狼じゃな" in talk) | ("人間" in talk) | ("人狼ではな" in talk)
-                    result = Species.HUMAN if white else Species.WEREWOLF
-                    judge: Judge = Judge(
-                        Agent(_talk.agent.agent_idx),
-                        self.game_info.day,
-                        Agent(utils.extract_agent_int(_talk.text)),
-                        result,
-                    )
-                    if _talk.agent.agent_idx not in self.divination_reports.keys():
-                        self.divination_reports[_talk.agent.agent_idx] = []
-                    self.divination_reports[_talk.agent.agent_idx].append(judge)
-        
+        for _talk in self.game_info.talk_list:
+            talk = _talk.text
+            cnt = 0
+            cnt += bool(re.match(talk, r"Agent[0\d]が白")) * 2
+            cnt += "白" in talk
+            cnt += "シロ" in talk
+            cnt += "黒" in talk
+            cnt += "クロ" in talk
+            cnt += "人狼" in talk
+            cnt += "人間" in talk
+            cnt += "占った" in talk
+            cnt += "占い" in talk
+            cnt += "結果" in talk
+            cnt += "Agent" in talk
+            cnt -= "だれ" in talk
+            cnt -= ("把握" in talk) * 2
+            cnt -= ("ok" in talk) * 2
+            cnt -= ("了解" in talk) * 2
+            cnt -= ("承知" in talk) * 2
+            cnt -= ("なるほど" in talk) * 2
+            cnt -= ("わかった" in talk) * 2
+            cnt -= ("わかりました" in talk) * 2
+            if cnt >= 3 and _talk.agent.agent_idx not in self.seer_co_list:  # 占い師の発言
+                self.seer_co_list.append(_talk.agent.agent_idx)
+                talk_target = utils.extract_agent_int(_talk.text)
+                white = (
+                    ("シロ" in talk)
+                    | ("白" in talk)
+                    | ("人狼じゃな" in talk)
+                    | ("人間" in talk)
+                    | ("人狼ではな" in talk)
+                )
+                result = Species.HUMAN if white else Species.WEREWOLF
+
+                if result == Species.WEREWOLF and talk_target != self.me.agent_idx:
+                    print("self.vote_candidates ", talk_target)
+                    self.vote_candidates.append(Agent(talk_target))
+                judge: Judge = Judge(
+                    Agent(_talk.agent.agent_idx),
+                    self.game_info.day,
+                    Agent(utils.extract_agent_int(_talk.text)),
+                    result,
+                )
+                if _talk.agent.agent_idx not in self.divination_reports.keys():
+                    self.divination_reports[_talk.agent.agent_idx] = []
+                self.divination_reports[_talk.agent.agent_idx].append(judge)
+            if (
+                cnt >= 3
+                and self.game_info.day == 2
+                and len(self.divination_reports[_talk.agent.agent_idx]) < 2
+            ):
+                talk_target = utils.extract_agent_int(_talk.text)
+                white = (
+                    ("シロ" in talk)
+                    | ("白" in talk)
+                    | ("人狼じゃな" in talk)
+                    | ("人間" in talk)
+                    | ("人狼ではな" in talk)
+                )
+                result = Species.HUMAN if white else Species.WEREWOLF
+
+                if result == Species.WEREWOLF and talk_target != self.me.agent_idx:
+                    # print("self.vote_candidates ", talk_target)
+                    self.vote_candidates.append(Agent(talk_target))
+                judge: Judge = Judge(
+                    Agent(_talk.agent.agent_idx),
+                    self.game_info.day,
+                    Agent(utils.extract_agent_int(_talk.text)),
+                    result,
+                )
+                """
+                if _talk.agent.agent_idx not in self.divination_reports.keys():
+                    self.divination_reports[_talk.agent.agent_idx] = []
+                """
+                self.divination_reports[_talk.agent.agent_idx].append(judge)
         content: Content = Content(ContentBuilder())
         content.text = self.generator.generate(self, Role.WEREWOLF)
         return content
+
+    def vote(self) -> Agent:
+        # todo
+        return (
+            random.choice(self.vote_candidates)
+            if len(self.vote_candidates)
+            else random.choice(self.humans)
+        )
