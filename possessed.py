@@ -17,7 +17,7 @@
 
 import random
 from collections import deque
-from typing import Deque, List
+from typing import Dict, List
 
 from aiwolf import (
     Agent,
@@ -36,9 +36,6 @@ from aiwolf import (
 from utterance_generator import (
     Generator,
 )
-from utterance_recognizer import (
-    Recognizer,
-)
 from aiwolf.constant import AGENT_NONE
 
 from const import CONTENT_SKIP, JUDGE_EMPTY
@@ -50,19 +47,28 @@ class NlpWolfPossessed(NlpWolfVillager):
 
     fake_role: Role
     """Fake role."""
-    co_date: int
-    """Scheduled comingout date."""
-    has_co: bool
-    """Whether or not comingout has done."""
-    my_judgee_queue: Deque[Judge]
-    """Queue of fake judgements."""
-    not_judged_agents: List[Agent]
-    """Agents that have not been judged."""
-    num_wolves: int
-    """The number of werewolves."""
-    werewolves: List[Agent]
-    """Fake werewolves."""
-    recognizer: Recognizer
+    me: Agent
+    """Myself."""
+    game_info: GameInfo
+    """Information about current game."""
+    game_setting: GameSetting
+    """Settings of current game."""
+    comingout_map: Dict[Agent, Role]
+    """Mapping between an agent and the role it claims that it is."""
+    divination_reports: Dict[int, List[Judge]]
+    """Time series of divination reports."""
+    identification_reports: List[Judge]
+    """Time series of identification reports."""
+    talk_list_head: int
+    """Index of the talk to be analysed next."""
+    long_uttrs: list
+    """List of little tweets in the game"""
+    short_uter: list
+    """List of little tweets(shorter) in the game"""
+    seer_co_list: List[int]
+    """List of who came out as seer."""
+    vote_candidates: List[Agent]
+    """List of who to vote"""
     generator: Generator
 
     def __init__(self) -> None:
@@ -75,8 +81,10 @@ class NlpWolfPossessed(NlpWolfVillager):
         self.not_judged_agents = []
         self.num_wolves = 0
         self.werewolves = []
+        self.seer_co_list = []
+        self.divination_reports = {}
+        self.vote_candidates = []
 
-        self.recognizer = Recognizer()
         self.generator = Generator()
 
     def initialize(self, game_info: GameInfo, game_setting: GameSetting) -> None:
@@ -88,6 +96,9 @@ class NlpWolfPossessed(NlpWolfVillager):
         self.not_judged_agents = self.get_others(self.game_info.agent_list)
         self.num_wolves = game_setting.role_num_map.get(Role.WEREWOLF, 0)
         self.werewolves.clear()
+        self.seer_co_list.clear()
+        self.divination_reports.clear()
+        self.vote_candidates.clear()
 
     def get_fake_judge(self) -> Judge:
         """Generate a fake judgement."""
@@ -126,11 +137,16 @@ class NlpWolfPossessed(NlpWolfVillager):
 
     def talk(self) -> Content:
         content: Content = Content(ContentBuilder())
-        content.text = self.generator.generate(Role.POSSESSED)
+        content.text = self.generator.generate(self, Role.POSSESSED)
         return content
 
     def update(self, game_info: GameInfo) -> None:
         self.game_info = game_info
 
-        # ここで、他人の発言を見て、それを解釈し、次にあてられたときに発言する内容を決定、また投票先の情報などを変更したりする
-        self.recognizer.recognize(game_info)
+    def vote(self) -> Agent:
+        # todo
+        return (
+            random.choice(self.vote_candidates)
+            if len(self.vote_candidates)
+            else Agent(random.choice([1, 2, 3, 4, 5]))
+        )
