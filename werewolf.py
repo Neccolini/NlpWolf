@@ -73,6 +73,8 @@ class NlpWolfWerewolf(NlpWolfPossessed):
     """List of who came out as seer."""
     vote_candidates: List[Agent]
     """List of who to vote"""
+    list_replied: List[str]
+    """Dict of comments I replied to"""
     generator: Generator
 
     def __init__(self) -> None:
@@ -86,6 +88,7 @@ class NlpWolfWerewolf(NlpWolfPossessed):
             self.divination_reports[i] = []
         self.attack_vote_candidate = AGENT_NONE
         self.vote_candidates = []
+        self.list_replied = []
         self.generator = Generator()
 
     def initialize(self, game_info: GameInfo, game_setting: GameSetting) -> None:
@@ -109,6 +112,7 @@ class NlpWolfWerewolf(NlpWolfPossessed):
         self.identification_reports.clear()
         self.seer_co_list.clear()
         self.vote_candidates.clear()
+        self.list_replied.clear()
 
     def is_alive(self, agent: Agent) -> bool:
         """Return whether the agent is alive.
@@ -121,13 +125,21 @@ class NlpWolfWerewolf(NlpWolfPossessed):
         """
         return self.game_info.status_map[agent] == Status.ALIVE
 
+    def get_alive(self) -> List[int]:
+        alive_list = []
+        for i in range(1, 6):
+            agent = Agent(i)
+            if self.game_info.status_map[agent] == Status.ALIVE:
+                alive_list.append(i)
+        return alive_list
+    
     def get_fake_judge(self) -> Judge:
         """Generate a fake judgement."""
         # Determine the target of the fake judgement.
         target: Agent = AGENT_NONE
         if self.fake_role == Role.SEER:  # Fake seer chooses a target randomly.
             if self.game_info.day != 0:
-                target = self.random_select(self.get_alive(self.not_judged_agents))
+                target = self.random_select(self.get_alive())
         elif self.fake_role == Role.MEDIUM:
             target = (
                 self.game_info.executed_agent
@@ -160,10 +172,10 @@ class NlpWolfWerewolf(NlpWolfPossessed):
             return Content(ComingoutContentBuilder(self.me, self.fake_role))
         # Choose the target of attack vote.
         # Vote for one of the agent that did comingout.
-        candidates = [a for a in self.get_alive(self.humans) if a in self.comingout_map]
+        candidates = [a for a in self.get_alive() if a in self.comingout_map]
         # Vote for one of the alive human agents if there are no candidates.
         if not candidates:
-            candidates = self.get_alive(self.humans)
+            candidates = self.get_alive()
         # Declare which to vote for if not declare yet or the candidate is changed.
         if (
             self.attack_vote_candidate == AGENT_NONE
@@ -185,6 +197,7 @@ class NlpWolfWerewolf(NlpWolfPossessed):
         self.game_info = game_info
 
     def talk(self) -> Content:
+        talk_this_turn = ""
         for _talk in self.game_info.talk_list:
             talk = _talk.text
             cnt = 0
@@ -220,7 +233,6 @@ class NlpWolfWerewolf(NlpWolfPossessed):
                 result = Species.HUMAN if white else Species.WEREWOLF
 
                 if result == Species.WEREWOLF and talk_target != self.me.agent_idx:
-                    print("self.vote_candidates ", talk_target)
                     self.vote_candidates.append(Agent(talk_target))
                 judge: Judge = Judge(
                     Agent(_talk.agent.agent_idx),
@@ -260,8 +272,35 @@ class NlpWolfWerewolf(NlpWolfPossessed):
                     self.divination_reports[_talk.agent.agent_idx] = []
                 """
                 self.divination_reports[_talk.agent.agent_idx].append(judge)
+            # 自分が疑われていた場合反論する
+            if (">>" + self.me.__str__()) in talk and _talk.agent.agent_idx != self.me.agent_idx:
+                suspected_cnt = 0
+                suspected_cnt += "黒" in talk
+                suspected_cnt += "クロ" in talk
+                suspected_cnt += "人狼だ" in talk
+                suspected_cnt += "人狼でしょ" in talk
+                suspected_cnt += "吊" in talk
+                suspected_cnt -= ("把握" in talk) * 2
+                suspected_cnt -= ("ok" in talk) * 2
+                suspected_cnt -= ("了解" in talk) * 2
+                suspected_cnt -= ("承知" in talk) * 2
+                suspected_cnt -= ("なるほど" in talk) * 2
+                suspected_cnt -= ("わかった" in talk) * 2
+                suspected_cnt -= ("わかりました" in talk) * 2
+                suspected_cnt -= ("だれ" in talk) * 3
+                suspected_cnt -= ("誰" in talk) * 3
+                suspected_cnt -= ("？" in talk) * 2
+                suspected_cnt -= ("who" in talk) * 2
+                if suspected_cnt > 0 and talk not in self.list_replied:
+                    self.list_replied.append(talk)
+                    talk_this_turn = self.generator.deny_wolf(Role.WEREWOLF, _talk)
+                elif suspected_cnt < 0 and talk not in self.list_replied:
+                    self.list_replied.append(talk)
+                    talk_this_turn = self.generator.answer_whois(self, _talk)
         content: Content = Content(ContentBuilder())
-        content.text = self.generator.generate(self, Role.WEREWOLF)
+        if talk_this_turn == "":
+            talk_this_turn = self.generator.generate(self, Role.WEREWOLF)
+        content.text = talk_this_turn
         return content
 
     def vote(self) -> Agent:
