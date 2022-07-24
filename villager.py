@@ -67,6 +67,8 @@ class NlpWolfVillager(AbstractPlayer):
     """List of little tweets in the game"""
     short_uter: list
     """List of little tweets(shorter) in the game"""
+    list_replied: List[str]
+    """Dict of comments I replied to"""
     seer_co_list: List[int]
     """List of who came out as seer."""
     vote_candidates: List[Agent]
@@ -88,6 +90,7 @@ class NlpWolfVillager(AbstractPlayer):
         self.talk_list_head = 0
         self.seer_co_list = []
         self.divination_reports = {}
+        self.list_replied = []
         for i in range(1, 6):
             self.divination_reports[i] = []
         self.talk_end = False
@@ -117,29 +120,19 @@ class NlpWolfVillager(AbstractPlayer):
         """
         return [a for a in agent_list if a != self.me]
 
-    def get_alive(self, agent_list: List[Agent]) -> List[Agent]:
-        """Return a list of alive agents contained in the given list of agents.
+    def get_alive(self) -> List[int]:
+        alive_list = []
+        for i in range(1, 6):
+            agent = Agent(i)
+            if self.game_info.status_map[agent] == Status.ALIVE:
+                alive_list.append(i)
+        return alive_list
 
-        Args:
-            agent_list: The list of agents.
-
-        Returns:
-            A list of alive agents contained in agent_list.
-        """
-        return [a for a in agent_list if self.is_alive(a)]
-
-    def get_alive_others(self, agent_list: List[Agent]) -> List[Agent]:
-        """Return a list of alive agents that is contained in the given list of agents
-        and is not equal to myself.
-
-        Args:
-            agent_list: The list of agents.
-
-        Returns:
-            A list of alie agents that is contained in agent_list
-            and is not equal to mysef.
-        """
-        return self.get_alive(self.get_others(agent_list))
+    def get_alive_others(self) -> List[int]:
+        alive_list = self.get_alive()
+        alive_list.remove(self.me.agent_idx)
+        return alive_list
+        
 
     def random_select(self, agent_list: List[Agent]) -> Agent:
         """Return one agent randomly chosen from the given list of agents.
@@ -162,6 +155,7 @@ class NlpWolfVillager(AbstractPlayer):
         self.identification_reports.clear()
         self.seer_co_list.clear()
         self.vote_candidates.clear()
+        self.list_replied.clear()
 
     def day_start(self) -> None:
         self.talk_list_head = 0
@@ -173,6 +167,7 @@ class NlpWolfVillager(AbstractPlayer):
         # self.recognizer.recognize(game_info)
 
     def talk(self) -> Content:
+        talk_this_turn = ""
         for _talk in self.game_info.talk_list:
             talk = _talk.text
             cnt = 0
@@ -208,7 +203,6 @@ class NlpWolfVillager(AbstractPlayer):
                 result = Species.HUMAN if white else Species.WEREWOLF
 
                 if result == Species.WEREWOLF and talk_target != self.me.agent_idx:
-                    print("self.vote_candidates ", talk_target)
                     self.vote_candidates.append(Agent(talk_target))
                 judge: Judge = Judge(
                     Agent(_talk.agent.agent_idx),
@@ -248,15 +242,41 @@ class NlpWolfVillager(AbstractPlayer):
                     self.divination_reports[_talk.agent.agent_idx] = []
                 """
                 self.divination_reports[_talk.agent.agent_idx].append(judge)
+            # 自分が疑われていた場合反論する
+            if (">>" + self.me.__str__()) in talk and _talk.agent.agent_idx != self.me.agent_idx:
+                suspected_cnt = 0
+                suspected_cnt += "黒" in talk
+                suspected_cnt += "クロ" in talk
+                suspected_cnt += "人狼だ" in talk
+                suspected_cnt += "人狼でしょ" in talk
+                suspected_cnt += "吊" in talk
+                suspected_cnt -= ("把握" in talk) * 2
+                suspected_cnt -= ("ok" in talk) * 2
+                suspected_cnt -= ("了解" in talk) * 2
+                suspected_cnt -= ("承知" in talk) * 2
+                suspected_cnt -= ("なるほど" in talk) * 2
+                suspected_cnt -= ("わかった" in talk) * 2
+                suspected_cnt -= ("わかりました" in talk) * 2
+                suspected_cnt -= ("だれ" in talk) * 3
+                suspected_cnt -= ("誰" in talk) * 3
+                suspected_cnt -= ("？" in talk) * 2
+                suspected_cnt -= ("who" in talk) * 2
+                if suspected_cnt > 0 and talk not in self.list_replied:
+                    self.list_replied.append(talk)
+                    talk_this_turn = self.generator.deny_wolf(Role.VILLAGER, _talk)
+                elif suspected_cnt < 0 and talk not in self.list_replied:
+                    self.list_replied.append(talk)
+                    talk_this_turn = self.generator.answer_whois(self, _talk)
         content: Content = Content(ContentBuilder())
-        content.text = self.generator.generate(self, Role.VILLAGER)
+        if talk_this_turn == "":
+            talk_this_turn = self.generator.generate(self, Role.VILLAGER)
+        content.text = talk_this_turn
         return content
 
     def vote(self) -> Agent:
         # todo
         if len(self.vote_candidates):
             test = random.choice(self.vote_candidates)
-            print("villager vote : ", test.agent_idx)
         return (
             test if len(self.vote_candidates) else Agent(random.choice([1, 2, 3, 4, 5]))
         )
