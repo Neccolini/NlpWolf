@@ -139,12 +139,16 @@ class Generator:
                     if (
                         div_res1.result == Species.WEREWOLF
                         and div_res1.target.agent_idx == agent.me.agent_idx
-                    ) or (
+                    ):
+                        utter = random.choice(utterance_phrases.DENY).replace(
+                            "_seer", div_res1.agent.__str__()
+                        ) 
+                    if (
                         div_res2.result == Species.WEREWOLF
                         and div_res2.target.agent_idx == agent.me.agent_idx
                     ):
                         utter = random.choice(utterance_phrases.DENY).replace(
-                            "_seer", seer
+                            "_seer", div_res2.agent.__str__()
                         )
                 if (
                     div_res1.result == Species.HUMAN
@@ -161,7 +165,7 @@ class Generator:
                 return utter
         if agent.game_info.day == 2:
             if len(agent.seer_co_list) == 1:
-                reports = agent.divination_reports[agent.seer_co_list]
+                reports = agent.divination_reports[agent.seer_co_list[0]]
                 seer_alive = agent.is_alive(agent.seer_co_list[0])
                 if seer_alive:
                     # 占い生存
@@ -224,14 +228,18 @@ class Generator:
                                     reports1[1].result == Species.WEREWOLF
                                     and reports1[1].target.agent_idx
                                     == agent.me.agent_idx
-                                ) or (
+                                ):
+                                    utter = random.choice(
+                                        utterance_phrases.DENY
+                                    ).replace("_seer", reports1[1].agent.__str__())
+                                if (
                                     reports2[1].result == Species.WEREWOLF
                                     and reports2[1].target.agent_idx
                                     == agent.me.agent_idx
                                 ):
                                     utter = random.choice(
                                         utterance_phrases.DENY
-                                    ).replace("_seer", seer)
+                                    ).replace("_seer", reports2[1].agent.__str__())
                                 if (
                                     reports1[1].result == Species.HUMAN
                                     and reports2[1].result == Species.HUMAN
@@ -267,7 +275,7 @@ class Generator:
                                     and reports2[1].target.agent_idx == agent.me.agent_idx
                                 ):
                                     utter = random.choice(utterance_phrases.DENY).replace(
-                                        "_seer", seer
+                                        "_seer", reports2[1].agent.__str__()
                                     )
                                 return utter
                             case (2, 1):
@@ -295,7 +303,7 @@ class Generator:
                                     and reports1[1].target.agent_idx == agent.me.agent_idx
                                 ):
                                     utter = random.choice(utterance_phrases.DENY).replace(
-                                        "_seer", seer
+                                        "_seer", reports1[1].agent.__str__()
                                     )
                                 return utter
                             case (1, 1):
@@ -328,7 +336,7 @@ class Generator:
                                 and reports1[1].target.agent_idx == agent.me.agent_idx
                             ):
                                 utter = random.choice(utterance_phrases.DENY).replace(
-                                    "_seer", seer
+                                    "_seer", reports1[1].agent.__str__()
                                 )
                             return utter
                         else:
@@ -362,7 +370,7 @@ class Generator:
                                 and reports2[1].target.agent_idx == agent.me.agent_idx
                             ):
                                 utter = random.choice(utterance_phrases.DENY).replace(
-                                    "_seer", seer
+                                    "_seer", reports2[1].agent.__str__()
                                 )
                             return utter
                         else:
@@ -384,6 +392,7 @@ class Generator:
                             .replace("_seer1", Agent(agent.seer_co_list[0]).__str__())
                             .replace("_seer2", Agent(agent.seer_co_list[1]).__str__())
                         )
+        print("WHYWEJKRFLWJEKRFLW+JERFLK+")
         return self.random_utterance(agent)
 
     def try_find_wolf(self, agent):
@@ -448,7 +457,7 @@ class Generator:
                 return self.ask_whois(agent)
             return self.random_utterance(agent)
     def deep_learning(self, agent):
-        return "<deep learned comment>"
+        return "Skip"
 
     def random_utterance(self, agent):
         if len(agent.vote_candidates) == 0 and random.random() < 0.271828:
@@ -473,6 +482,14 @@ class Generator:
                 i += 1
                 if cnt > 1 and len(agent.game_info.talk_list) - i < 3:
                     return random.choice(utterance_phrases.REQ_REASON).replace("_target", talk.agent.__str__())
+                cnt = 0
+                cnt -= ("どうして" in text) * 2
+                cnt -= ("なんで" in text) * 2
+                cnt -= ("理由" in text) * 2
+                cnt -= ("なぜ" in text) * 2
+                cnt -= ("根拠" in text) * 2
+                if (f">>{agent.me.__str__()}" in text)  and (text in utterance_phrases.REQ_REASON or cnt < 0):
+                    return random.choice(utterance_phrases.ANSWER_REASON1).replace("_target", talk.agent.__str__())
         return self.deep_learning(agent)
 
     def seer_utter(self, agent):
@@ -497,7 +514,7 @@ class Generator:
                 if talk_len < 2 * DAY1_NUM_PLAYER:
                     return self.try_find_wolf(agent)
         if agent.game_info.day == 2 and agent.game_info.divine_result:
-            if talk_len < DAY2_NUM_PLAYER:
+            if talk_len < DAY2_NUM_PLAYER * 2:
                 target = agent.game_info.divine_result.target.__str__()
                 judge: str = (
                     "白"
@@ -567,7 +584,7 @@ class Generator:
             return utter
         if len(agent.game_info.talk_list) < 10:
             return self.seer_ack(agent)
-        if len(agent.game_info.talk_list) < 20:
+        if len(agent.game_info.talk_list) < 30:
             return self.try_find_wolf(agent)
         return self.random_utterance(agent)
 
@@ -575,8 +592,8 @@ class Generator:
         if len(agent.seer_co_list) == 0:
             utter = random.choice(utterance_phrases.SEER_RESULT_REQ_LIST)
             return utter
-        if len(agent.game_info.talk_list) < 10:
+        if len(agent.game_info.talk_list) < 6:
             return self.seer_ack(agent)
-        if len(agent.game_info.talk_list) < 20:
+        if len(agent.game_info.talk_list) < 18:
             return self.try_find_wolf(agent)
         return self.random_utterance(agent)

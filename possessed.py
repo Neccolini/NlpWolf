@@ -44,6 +44,7 @@ from const import CONTENT_SKIP, JUDGE_EMPTY
 from villager import NlpWolfVillager
 import utils
 
+
 class NlpWolfPossessed(NlpWolfVillager):
     """NlpWolf possessed agent."""
 
@@ -222,7 +223,9 @@ class NlpWolfPossessed(NlpWolfVillager):
                 """
                 self.divination_reports[_talk.agent.agent_idx].append(judge)
             # 自分が疑われていた場合反論する
-            if (">>" + self.me.__str__()) in talk and _talk.agent.agent_idx != self.me.agent_idx:
+            if (
+                ">>" + self.me.__str__()
+            ) in talk and _talk.agent.agent_idx != self.me.agent_idx:
                 suspected_cnt = 0
                 suspected_cnt += "黒" in talk
                 suspected_cnt += "クロ" in talk
@@ -237,6 +240,7 @@ class NlpWolfPossessed(NlpWolfVillager):
                 suspected_cnt -= ("わかった" in talk) * 2
                 suspected_cnt -= ("わかりました" in talk) * 2
                 suspected_cnt -= ("だれ" in talk) * 3
+                suspected_cnt -= ("見てる？" in talk) * 3
                 suspected_cnt -= ("誰" in talk) * 3
                 suspected_cnt -= ("？" in talk) * 2
                 suspected_cnt -= ("who" in talk) * 2

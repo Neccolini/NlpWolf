@@ -213,6 +213,8 @@ class NlpWolfVillager(AbstractPlayer):
                 if _talk.agent.agent_idx not in self.divination_reports.keys():
                     self.divination_reports[_talk.agent.agent_idx] = []
                 self.divination_reports[_talk.agent.agent_idx].append(judge)
+            if cnt >= 3 and len(self.divination_reports[_talk.agent.agent_idx]) == 1:
+                self.divination_reports[_talk.agent.agent_idx].append(judge)
             if (
                 cnt >= 3
                 and self.game_info.day == 2
@@ -258,6 +260,7 @@ class NlpWolfVillager(AbstractPlayer):
                 suspected_cnt -= ("わかった" in talk) * 2
                 suspected_cnt -= ("わかりました" in talk) * 2
                 suspected_cnt -= ("だれ" in talk) * 3
+                suspected_cnt -= ("見てる？" in talk) * 3
                 suspected_cnt -= ("誰" in talk) * 3
                 suspected_cnt -= ("？" in talk) * 2
                 suspected_cnt -= ("who" in talk) * 2
