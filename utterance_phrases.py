@@ -519,9 +519,9 @@ GRAY3 = [
 ]
 
 WHITE_CERTIFIED = [
-    "_whiteは確定白か",
+    "_white は確定白か",
     "_white は確実に人間ってこと？",
-    "_whiteは白だから他の人を吊ろうね",
+    "_white は白だから他の人を吊ろうね",
 ]
 
 ASK_WHOIS_WEREWOLF = [
