@@ -142,7 +142,7 @@ class Generator:
                     ):
                         utter = random.choice(utterance_phrases.DENY).replace(
                             "_seer", div_res1.agent.__str__()
-                        ) 
+                        )
                     if (
                         div_res2.result == Species.WEREWOLF
                         and div_res2.target.agent_idx == agent.me.agent_idx
@@ -223,7 +223,7 @@ class Generator:
                                         else "黒",
                                     )
                                 )
-                                #自分に黒だしされたら
+                                # 自分に黒だしされたら
                                 if (
                                     reports1[1].result == Species.WEREWOLF
                                     and reports1[1].target.agent_idx
@@ -269,14 +269,15 @@ class Generator:
                                         else "黒",
                                     )
                                 )
-                                #自分に黒だし
+                                # 自分に黒だし
                                 if (
                                     reports2[1].result == Species.WEREWOLF
-                                    and reports2[1].target.agent_idx == agent.me.agent_idx
+                                    and reports2[1].target.agent_idx
+                                    == agent.me.agent_idx
                                 ):
-                                    utter = random.choice(utterance_phrases.DENY).replace(
-                                        "_seer", reports2[1].agent.__str__()
-                                    )
+                                    utter = random.choice(
+                                        utterance_phrases.DENY
+                                    ).replace("_seer", reports2[1].agent.__str__())
                                 return utter
                             case (2, 1):
                                 utter = (
@@ -297,14 +298,15 @@ class Generator:
                                         else "黒",
                                     )
                                 )
-                                #自分に黒だし
+                                # 自分に黒だし
                                 if (
                                     reports1[1].result == Species.WEREWOLF
-                                    and reports1[1].target.agent_idx == agent.me.agent_idx
+                                    and reports1[1].target.agent_idx
+                                    == agent.me.agent_idx
                                 ):
-                                    utter = random.choice(utterance_phrases.DENY).replace(
-                                        "_seer", reports1[1].agent.__str__()
-                                    )
+                                    utter = random.choice(
+                                        utterance_phrases.DENY
+                                    ).replace("_seer", reports1[1].agent.__str__())
                                 return utter
                             case (1, 1):
                                 return (
@@ -330,7 +332,7 @@ class Generator:
                                     "白" if reports1[1].result == Species.HUMAN else "黒",
                                 )
                             )
-                            #自分に黒だしされた
+                            # 自分に黒だしされた
                             if (
                                 reports1[1].result == Species.WEREWOLF
                                 and reports1[1].target.agent_idx == agent.me.agent_idx
@@ -364,7 +366,7 @@ class Generator:
                                     "白" if reports2[1].result == Species.HUMAN else "黒",
                                 )
                             )
-                            #自分に黒だしされた
+                            # 自分に黒だしされた
                             if (
                                 reports2[1].result == Species.WEREWOLF
                                 and reports2[1].target.agent_idx == agent.me.agent_idx
@@ -399,6 +401,8 @@ class Generator:
         if agent.game_info.day == 1:
             if agent.divination_reports == {}:
                 return self.random_utterance(agent)
+            if len(agent.seer_co_list) == 1:
+                return "Skip"
             div_res1 = agent.divination_reports[agent.seer_co_list[0]][0]
             div_res2 = agent.divination_reports[agent.seer_co_list[1]][0]
             match (div_res1.result, div_res2.result):
@@ -419,7 +423,9 @@ class Generator:
                     elif len(gray_list) == 2:
                         if agent.me.agent_idx in gray_list:
                             gray_list.remove(agent.me.agent_idx)
-                            return random.choice(utterance_phrases.GRAY2_AND_IM_GRAY).replace("_gray", Agent(gray_list[0]).__str__())
+                            return random.choice(
+                                utterance_phrases.GRAY2_AND_IM_GRAY
+                            ).replace("_gray", Agent(gray_list[0]).__str__())
                         return (
                             random.choice(utterance_phrases.GRAY2)
                             .replace("_gray1", f"Agent[0{gray_list[0]}]")
@@ -428,7 +434,9 @@ class Generator:
                     elif len(gray_list) == 1:
                         if agent.me.agent_idx in gray_list:
                             target = random.choice(agent.get_alive_others())
-                            return random.choice(utterance_phrases.GRAY1_AND_IM_GRAY).replace("_target", Agent(target).__str__())
+                            return random.choice(
+                                utterance_phrases.GRAY1_AND_IM_GRAY
+                            ).replace("_target", Agent(target).__str__())
                         return random.choice(utterance_phrases.GRAY1).replace(
                             "_gray", f"Agent[0{gray_list[0]}]"
                         )
@@ -456,6 +464,7 @@ class Generator:
             if random.random() < 0.2:
                 return self.ask_whois(agent)
             return self.random_utterance(agent)
+
     def deep_learning(self, agent):
         return "Skip"
 
@@ -481,15 +490,21 @@ class Generator:
                 cnt -= ("理由" in text) * 2
                 i += 1
                 if cnt > 1 and len(agent.game_info.talk_list) - i < 3:
-                    return random.choice(utterance_phrases.REQ_REASON).replace("_target", talk.agent.__str__())
+                    return random.choice(utterance_phrases.REQ_REASON).replace(
+                        "_target", talk.agent.__str__()
+                    )
                 cnt = 0
                 cnt -= ("どうして" in text) * 2
                 cnt -= ("なんで" in text) * 2
                 cnt -= ("理由" in text) * 2
                 cnt -= ("なぜ" in text) * 2
                 cnt -= ("根拠" in text) * 2
-                if (f">>{agent.me.__str__()}" in text)  and (text in utterance_phrases.REQ_REASON or cnt < 0):
-                    return random.choice(utterance_phrases.ANSWER_REASON1).replace("_target", talk.agent.__str__())
+                if (f">>{agent.me.__str__()}" in text) and (
+                    text in utterance_phrases.REQ_REASON or cnt < 0
+                ):
+                    return random.choice(utterance_phrases.ANSWER_REASON1).replace(
+                        "_target", talk.agent.__str__()
+                    )
         return self.deep_learning(agent)
 
     def seer_utter(self, agent):
