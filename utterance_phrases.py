@@ -37,7 +37,7 @@ HELLO_LIST = [
     "Hello!",
     "Hello World!",
     "おはよう",
-    "おはよう(-_-)",
+    "おはよう",
     "Hello nice to meet you",
     "村人です。よろしく",
     "よろしく",

@@ -4,3 +4,4 @@ def extract_agent_int(context: str) -> int:
     result = re.match(pattern, context)
     if result:
         return int(result.group(1))
+    return 0
